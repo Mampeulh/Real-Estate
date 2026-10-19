@@ -1,0 +1,24 @@
+{
+  "name": "real-estate-backend",
+  "version": "1.0.0",
+  "description": "Mock API REST pour la gestion de biens immobiliers (propriétés, lots, locataires, baux, loyers). Node.js/Express, stockage en mémoire, Swagger UI.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

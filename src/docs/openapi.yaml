@@ -1,0 +1,709 @@
+openapi: 3.0.3
+info:
+  title: Real Estate Property Management Mock API
+  description: >
+    API mock pour la gestion de biens immobiliers : propriétés (immeubles),
+    lots, locataires, baux et loyers. Stockage en mémoire, données de démo
+    réinitialisées à chaque redémarrage.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Backend local (Node.js/Express, stockage en mémoire)
+
+tags:
+  - name: Properties
+    description: Immeubles / propriétés
+  - name: Units
+    description: Lots (appartements, bureaux, commerces, parkings)
+  - name: Tenants
+    description: Locataires
+  - name: Leases
+    description: Baux
+  - name: Payments
+    description: Loyers (échéances et paiements)
+
+paths:
+  /properties:
+    get:
+      tags: [Properties]
+      summary: Liste des propriétés
+      parameters:
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/PropertyType' }
+        - name: city
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée des propriétés
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Property' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+    post:
+      tags: [Properties]
+      summary: Créer une propriété
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyInput' }
+      responses:
+        '201':
+          description: Propriété créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /properties/{propertyId}:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    get:
+      tags: [Properties]
+      summary: Détail d'une propriété
+      responses:
+        '200':
+          description: Détail de la propriété
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Properties]
+      summary: Mettre à jour une propriété
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyInput' }
+      responses:
+        '200':
+          description: Propriété mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Property' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Properties]
+      summary: Supprimer une propriété (et ses lots, baux et loyers)
+      responses:
+        '204': { description: Propriété supprimée }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /properties/{propertyId}/units:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    get:
+      tags: [Properties]
+      summary: Lots d'une propriété
+      responses:
+        '200':
+          description: Liste des lots
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Unit' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /properties/{propertyId}/summary:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    get:
+      tags: [Properties]
+      summary: Synthèse d'une propriété (occupation, loyers, impayés)
+      responses:
+        '200':
+          description: Indicateurs agrégés
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PropertySummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /units:
+    get:
+      tags: [Units]
+      summary: Liste des lots
+      parameters:
+        - name: propertyId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/UnitStatus' }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/UnitType' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée des lots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Unit' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+    post:
+      tags: [Units]
+      summary: Créer un lot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UnitInput' }
+      responses:
+        '201':
+          description: Lot créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Unit' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /units/{unitId}:
+    parameters:
+      - name: unitId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Units]
+      summary: Détail d'un lot
+      responses:
+        '200':
+          description: Détail du lot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Unit' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Units]
+      summary: Mettre à jour un lot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UnitInput' }
+      responses:
+        '200':
+          description: Lot mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Unit' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Units]
+      summary: Supprimer un lot (et ses baux et loyers)
+      responses:
+        '204': { description: Lot supprimé }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: Liste des locataires
+      parameters:
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/TenantType' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée des locataires
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Tenant' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+    post:
+      tags: [Tenants]
+      summary: Créer un locataire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TenantInput' }
+      responses:
+        '201':
+          description: Locataire créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tenant' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /tenants/{tenantId}:
+    parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Tenants]
+      summary: Détail d'un locataire
+      responses:
+        '200':
+          description: Détail du locataire
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tenant' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Tenants]
+      summary: Mettre à jour un locataire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TenantInput' }
+      responses:
+        '200':
+          description: Locataire mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tenant' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tenants]
+      summary: Supprimer un locataire (refusé s'il a un bail actif)
+      responses:
+        '204': { description: Locataire supprimé }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /leases:
+    get:
+      tags: [Leases]
+      summary: Liste des baux
+      parameters:
+        - name: unitId
+          in: query
+          schema: { type: string }
+        - name: tenantId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/LeaseStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée des baux
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Lease' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+    post:
+      tags: [Leases]
+      summary: Créer un bail (le lot passe à "occupied" si le bail est actif)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaseInput' }
+      responses:
+        '201':
+          description: Bail créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lease' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /leases/{leaseId}:
+    parameters:
+      - $ref: '#/components/parameters/LeaseId'
+    get:
+      tags: [Leases]
+      summary: Détail d'un bail
+      responses:
+        '200':
+          description: Détail du bail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lease' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Leases]
+      summary: Mettre à jour un bail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeaseInput' }
+      responses:
+        '200':
+          description: Bail mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lease' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Leases]
+      summary: Supprimer un bail (et ses loyers)
+      responses:
+        '204': { description: Bail supprimé }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /leases/{leaseId}/payments:
+    parameters:
+      - $ref: '#/components/parameters/LeaseId'
+    get:
+      tags: [Leases]
+      summary: Loyers d'un bail
+      responses:
+        '200':
+          description: Échéancier et paiements du bail
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RentPayment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /payments:
+    get:
+      tags: [Payments]
+      summary: Liste des loyers
+      parameters:
+        - name: leaseId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PaymentStatus' }
+        - name: period
+          in: query
+          description: Période au format YYYY-MM
+          schema: { type: string, example: "2026-09" }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée des loyers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/RentPayment' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+    post:
+      tags: [Payments]
+      summary: Enregistrer une échéance ou un paiement de loyer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RentPaymentInput' }
+      responses:
+        '201':
+          description: Loyer enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RentPayment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /payments/{paymentId}:
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Payments]
+      summary: Détail d'un loyer
+      responses:
+        '200':
+          description: Détail du loyer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RentPayment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Payments]
+      summary: Mettre à jour un loyer (ex. enregistrer un paiement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RentPaymentInput' }
+      responses:
+        '200':
+          description: Loyer mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RentPayment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Payments]
+      summary: Supprimer un loyer
+      responses:
+        '204': { description: Loyer supprimé }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1, minimum: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+    PropertyId:
+      name: propertyId
+      in: path
+      required: true
+      schema: { type: string }
+    LeaseId:
+      name: leaseId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: "INVALID_INPUT"
+            message: "Champs requis : name, type, address."
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: "NOT_FOUND"
+            message: "La ressource demandée n'existe pas."
+    Conflict:
+      description: Conflit avec l'état actuel des données
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: "CONFLICT"
+            message: "Ce lot a déjà un bail actif."
+
+  schemas:
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    PropertyType:
+      type: string
+      enum: [residential, commercial, mixed]
+    UnitType:
+      type: string
+      enum: [apartment, studio, office, shop, parking]
+    UnitStatus:
+      type: string
+      enum: [vacant, occupied, renovation]
+    TenantType:
+      type: string
+      enum: [individual, company]
+    LeaseStatus:
+      type: string
+      enum: [upcoming, active, terminated]
+    PaymentStatus:
+      type: string
+      enum: [pending, paid, partial, late]
+
+    Address:
+      type: object
+      required: [street, postalCode, city, country]
+      properties:
+        street: { type: string, example: "12 rue de la République" }
+        postalCode: { type: string, example: "13001" }
+        city: { type: string, example: "Marseille" }
+        country: { type: string, description: "Code ISO 3166-1 alpha-2", example: "FR" }
+
+    Property:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/PropertyType' }
+        address: { $ref: '#/components/schemas/Address' }
+        yearBuilt: { type: integer }
+        totalSurfaceM2: { type: number }
+        owner: { type: string }
+        createdAt: { type: string, format: date-time }
+      example:
+        id: "prop_001"
+        name: "Résidence du Vieux-Port"
+        type: "mixed"
+        address:
+          street: "12 rue de la République"
+          postalCode: "13001"
+          city: "Marseille"
+          country: "FR"
+        yearBuilt: 1965
+        totalSurfaceM2: 820
+        owner: "SCI Horizon"
+        createdAt: "2024-01-15T09:00:00Z"
+
+    PropertyInput:
+      type: object
+      required: [name, type, address]
+      properties:
+        name: { type: string }
+        type: { $ref: '#/components/schemas/PropertyType' }
+        address: { $ref: '#/components/schemas/Address' }
+        yearBuilt: { type: integer }
+        totalSurfaceM2: { type: number }
+        owner: { type: string }
+
+    Unit:
+      type: object
+      properties:
+        id: { type: string }
+        propertyId: { type: string }
+        reference: { type: string, example: "A-101" }
+        type: { $ref: '#/components/schemas/UnitType' }
+        floor: { type: integer }
+        surfaceM2: { type: number }
+        rooms: { type: integer }
+        status: { $ref: '#/components/schemas/UnitStatus' }
+        monthlyRentTarget: { type: number, description: "Loyer mensuel cible hors charges" }
+
+    UnitInput:
+      type: object
+      required: [propertyId, reference, type, surfaceM2]
+      properties:
+        propertyId: { type: string }
+        reference: { type: string }
+        type: { $ref: '#/components/schemas/UnitType' }
+        floor: { type: integer }
+        surfaceM2: { type: number }
+        rooms: { type: integer }
+        status: { $ref: '#/components/schemas/UnitStatus' }
+        monthlyRentTarget: { type: number }
+
+    Tenant:
+      type: object
+      properties:
+        id: { type: string }
+        type: { $ref: '#/components/schemas/TenantType' }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    TenantInput:
+      type: object
+      required: [type, name, email]
+      properties:
+        type: { $ref: '#/components/schemas/TenantType' }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+
+    Lease:
+      type: object
+      properties:
+        id: { type: string }
+        unitId: { type: string }
+        tenantId: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date, nullable: true }
+        monthlyRent: { type: number, description: "Loyer mensuel hors charges" }
+        charges: { type: number, description: "Provision pour charges mensuelle" }
+        deposit: { type: number, description: "Dépôt de garantie" }
+        paymentDay: { type: integer, minimum: 1, maximum: 28 }
+        status: { $ref: '#/components/schemas/LeaseStatus' }
+
+    LeaseInput:
+      type: object
+      required: [unitId, tenantId, startDate, monthlyRent]
+      properties:
+        unitId: { type: string }
+        tenantId: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date, nullable: true }
+        monthlyRent: { type: number }
+        charges: { type: number }
+        deposit: { type: number }
+        paymentDay: { type: integer, minimum: 1, maximum: 28 }
+        status: { $ref: '#/components/schemas/LeaseStatus' }
+
+    RentPayment:
+      type: object
+      properties:
+        id: { type: string }
+        leaseId: { type: string }
+        period: { type: string, description: "Mois concerné (YYYY-MM)", example: "2026-09" }
+        amountDue: { type: number }
+        amountPaid: { type: number }
+        dueDate: { type: string, format: date }
+        paidDate: { type: string, format: date, nullable: true }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+
+    RentPaymentInput:
+      type: object
+      required: [leaseId, period, amountDue, dueDate]
+      properties:
+        leaseId: { type: string }
+        period: { type: string, example: "2026-10" }
+        amountDue: { type: number }
+        amountPaid: { type: number }
+        dueDate: { type: string, format: date }
+        paidDate: { type: string, format: date, nullable: true }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+
+    PropertySummary:
+      type: object
+      properties:
+        propertyId: { type: string }
+        unitsCount: { type: integer }
+        occupiedUnits: { type: integer }
+        occupancyRate: { type: number, description: "Taux d'occupation (0-1)" }
+        monthlyRentRoll: { type: number, description: "Somme des loyers + charges des baux actifs" }
+        outstandingAmount: { type: number, description: "Montant impayé (échéances pending/partial/late)" }
+        lateCount: { type: integer }
+      example:
+        propertyId: "prop_001"
+        unitsCount: 4
+        occupiedUnits: 3
+        occupancyRate: 0.75
+        monthlyRentRoll: 4150
+        outstandingAmount: 2790
+        lateCount: 2

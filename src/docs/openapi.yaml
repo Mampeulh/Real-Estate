@@ -7,6 +7,8 @@ info:
     réinitialisées à chaque redémarrage.
   version: 1.0.0
 servers:
+  - url: https://real-estate-backend-dsb1.onrender.com/api/v1
+    description: Instance déploée sur Render
   - url: http://localhost:3000/api/v1
     description: Backend local (Node.js/Express, stockage en mémoire)
 
